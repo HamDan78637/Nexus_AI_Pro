@@ -1,4 +1,4 @@
-index.html<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -26,7 +26,6 @@ index.html<!DOCTYPE html>
       width: 100%;
       max-width: 900px;
       height: 100vh;
-      max-height: 850px;
       background: #0b1728;
       display: flex;
       flex-direction: column;
@@ -134,8 +133,9 @@ index.html<!DOCTYPE html>
       cursor: pointer;
     }
 
-    #sendButton:hover {
-      background: #3199ec;
+    #sendButton:disabled {
+      opacity: 0.6;
+      cursor: wait;
     }
 
     @media (max-width: 600px) {
@@ -188,7 +188,7 @@ index.html<!DOCTYPE html>
 
       <div class="message bot">
         Hello! I'm Nexus_AI_Pro. 🚀
-        
+
 How can I help you today?
       </div>
 
@@ -208,6 +208,9 @@ How can I help you today?
   </div>
 
   <script>
+    const WORKER_URL =
+      "https://nexus-ai-pro.hamdansuhail17.workers.dev/";
+
     const input = document.getElementById("messageInput");
     const button = document.getElementById("sendButton");
     const chat = document.getElementById("chat");
@@ -218,23 +221,52 @@ How can I help you today?
       message.textContent = text;
       chat.appendChild(message);
       chat.scrollTop = chat.scrollHeight;
+      return message;
     }
 
-    function sendMessage() {
+    async function sendMessage() {
       const text = input.value.trim();
 
-      if (!text) return;
+      if (!text || button.disabled) return;
 
       addMessage(text, "user");
       input.value = "";
 
-      // Poe API connection will be added securely in the next step.
-      setTimeout(() => {
-        addMessage(
-          "Your message was received. The secure AI connection will be added in the next step.",
-          "bot"
-        );
-      }, 500);
+      button.disabled = true;
+      button.textContent = "Thinking...";
+
+      const thinking = addMessage("Nexus_AI_Pro is thinking...", "bot");
+
+      try {
+        const response = await fetch(WORKER_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            prompt: text
+          })
+        });
+
+        const data = await response.json();
+
+        thinking.remove();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Request failed");
+        }
+
+        addMessage(data.response || "No response received.", "bot");
+
+      } catch (error) {
+        thinking.textContent =
+          "Sorry, I couldn't connect to Nexus_AI_Pro right now. Please try again.";
+        console.error(error);
+      }
+
+      button.disabled = false;
+      button.textContent = "Send";
+      input.focus();
     }
 
     button.addEventListener("click", sendMessage);
